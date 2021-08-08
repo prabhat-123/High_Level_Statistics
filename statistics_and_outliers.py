@@ -1,12 +1,13 @@
 import csv
 import numpy as np
 from prettytable import PrettyTable
+from collections import defaultdict
 
 class CSVREADER:
     def __init__(self,filename):
         self.filename = filename
-        
 
+    
     def read_csv(self):
         csv_file = open(self.filename,'r')
         csv_reader = csv.reader(csv_file)
@@ -17,7 +18,8 @@ class CSVREADER:
         fields = next(csv_reader)
         columns = [field for field in fields]
         return columns
-
+    
+    
     def rows(self):
         csv_reader = self.read_csv()
         rows = []
@@ -25,14 +27,34 @@ class CSVREADER:
             rows.append(row)
         return rows
 
+    def getColumns(self):
+        rows = self.rows()
+        columns = self.columns()
+        rows = np.array(rows[1:])
+        rows_separation = np.split(rows,len(columns),axis=1)
+        rows_numerical = []
+        columns_numerical = []
+        rows_categorical = []
+        columns_categorical = []
+        for i in range(len(columns)):
+            try:
+                rows_numerical.append([float(a) for a in rows_separation[i]]) 
+                columns_numerical.append(columns[i])
+            except:
+                rows_categorical.append(str(rows_separation[i]))
+                columns_categorical.append(columns[i])
+        return rows_numerical,columns_numerical,rows_categorical,columns_categorical
+
 
     def head(self,i):
         self.i = i
         columns = self.columns()
         rows = self.rows()
-        print('\n First {} rows are:\n'.format(i))
-        for row in rows[:i+1]:
-            print(','.join(item for item in row))
+        rows = rows[1:i+1]
+        x = PrettyTable()
+        x.field_names = columns
+        x.add_rows(rows)
+        return x
    
 
     def shape(self):
@@ -44,176 +66,68 @@ class CSVREADER:
         return(len(rows),len(fields))
 
 
-
-    def info(self):
-        pass
-
-
-    def mean(self,cols):
-        self.cols = cols
-        columns = self.columns()
-        rows = self.rows()
-        mean=None
-        if type(cols).__name__ == "str":
-            try:
-                index = columns.index(cols)
-                rows = np.array(rows[1:]).astype(np.float)
-                extract_rows = rows[:,index]
-                mean = np.mean(extract_rows,axis=0)
-            except Exception as e:
-                print("{} not found in the columns".format(cols))
-        elif type(cols).__name__ == "list" and cols==columns:
-            rows = np.array(rows[1:]).astype(np.float)
-            mean = np.mean(rows,axis=0)
-        else:
-            print("Other data types are not allowed for cols")
-        return mean
+    def count(self):
+        non_missing_counts= None
+        rows_numerical,columns_numerical,rows_categorical,columns_categorical= self.getColumns()
+        rows = np.array(rows_numerical).astype(np.float)
+        split_rows = np.split(rows,len(columns_numerical),axis=0)
+        non_missing_counts = []
+        for split in split_rows:
+            nmc = np.count_nonzero(~np.isnan(split))
+            non_missing_counts.append(nmc)
+        return non_missing_counts
 
 
+    def mean(self):
+        [rows_numerical,columns_numerical,rows_categorical,columns_categorical] = self.getColumns()
+        mean = np.nanmean(rows_numerical,axis=1) 
+        return np.round(mean,decimals = 2)
 
-    def median(self,cols):
-        self.cols = cols
-        columns = self.columns()
-        rows = self.rows()
-        median=None
-        if type(cols).__name__ == "str":
-            try:
-                index = columns.index(cols)
-                rows = np.array(rows[1:]).astype(np.float)
-                extract_rows = rows[:,index]
-                median = np.median(extract_rows,axis=0)
-            except Exception as e:
-                print("{} not found in the columns".format(cols))
-        elif type(cols).__name__ == "list" and cols==columns:
-            rows = np.array(rows[1:]).astype(np.float)
-            median= np.median(rows,axis=0)
-        else:
-            print("Other data types are not allowed for cols")
-        return median
+    def median(self):
+        [rows_numerical,columns_numerical,rows_categorical,columns_categorical] = self.getColumns()
+        median = np.nanmedian(rows_numerical,axis=1) 
+        return np.round(median,decimals=2)
 
-
-    def minimum(self,cols):
-        self.cols = cols
-        columns = self.columns()
-        rows = self.rows()
-        min=None
-        if type(cols).__name__ == "str":
-            try:
-                index = columns.index(cols)
-                rows = np.array(rows[1:]).astype(np.float)
-                extract_rows = rows[:,index]
-                min = np.min(extract_rows,axis=0)
-            except Exception as e:
-                print("{} not found in the columns".format(cols))
-        elif type(cols).__name__ == "list" and cols==columns:
-            rows = np.array(rows[1:]).astype(np.float)
-            min= np.min(rows,axis=0)
-        else:
-            print("Other data types are not allowed for cols")
-        return min
+    def minimum(self):
+        [rows_numerical,columns_numerical,rows_categorical,columns_categorical] = self.getColumns()
+        minimum = np.nanmin(rows_numerical,axis=1) 
+        return minimum
 
     
-    def maximum(self,cols):
-        self.cols = cols
-        columns = self.columns()
-        rows = self.rows()
-        max=None
-        if type(cols).__name__ == "str":
-            try:
-                index = columns.index(cols)
-                rows = np.array(rows[1:]).astype(np.float)
-                extract_rows = rows[:,index]
-                max = np.max(extract_rows,axis=0)
-            except Exception as e:
-                print("{} not found in the columns".format(cols))
-        elif type(cols).__name__ == "list" and cols==columns:
-            rows = np.array(rows[1:]).astype(np.float)
-            max= np.max(rows,axis=0)
-        else:
-            print("Other data types are not allowed for cols")
-        return max
-
+    def maximum(self):
+        [rows_numerical,columns_numerical,rows_categorical,columns_categorical] = self.getColumns()
+        maximum = np.nanmax(rows_numerical,axis=1) 
+        return maximum
+    
+    def standard_deviation(self):
+        [rows_numerical,columns_numerical,rows_categorical,columns_categorical] = self.getColumns()
+        standard_deviation = np.nanstd(rows_numerical,axis=1) 
+        return np.round(standard_deviation,decimals=2)
 
     
-    def std(self,cols):
-        self.cols = cols
-        columns = self.columns()
-        rows = self.rows()
-        std_deviation=None
-        if type(cols).__name__ == "str":
-            try:
-                index = columns.index(cols)
-                rows = np.array(rows[1:]).astype(np.float)
-                extract_rows = rows[:,index]
-                std_deviation = np.std(extract_rows,axis=0)
-            except Exception as e:
-                print("{} not found in the columns".format(cols))
-        elif type(cols).__name__ == "list" and cols==columns:
-            rows = np.array(rows[1:]).astype(np.float)
-            std_deviation= np.std(rows,axis=0)
-        else:
-            print("Other data types are not allowed for cols")
-        return std_deviation
+    def first_quantile(self):
+        [rows_numerical,columns_numerical,rows_categorical,columns_categorical] = self.getColumns()
+        first_quantile = np.nanpercentile(rows_numerical,25,axis=1) 
+        return np.round(first_quantile,decimals=2)
 
-    
-    def first_quantile(self,cols):
-        self.cols = cols
-        columns = self.columns()
-        rows = self.rows()
-        q1=None
-        if type(cols).__name__ == "str":
-            try:
-                index = columns.index(cols)
-                rows = np.array(rows[1:]).astype(np.float)
-                extract_rows = rows[:,index]
-                q1 = np.percentile(extract_rows,25,axis=0)
-            except Exception as e:
-                print("{} not found in the columns".format(cols))
-        elif type(cols).__name__ == "list" and cols==columns:
-            rows = np.array(rows[1:]).astype(np.float)
-            q1= np.percentile(rows,25,axis=0)
-        else:
-            print("Other data types are not allowed for cols")
-        return q1
+    def third_quantile(self):
+        [rows_numerical,columns_numerical,rows_categorical,columns_categorical] = self.getColumns()
+        third_quantile = np.nanpercentile(rows_numerical,75,axis=1) 
+        return np.round(third_quantile,decimals=2)      
 
-
-
-
-    def third_quantile(self,cols):
-        self.cols = cols
-        columns = self.columns()
-        rows = self.rows()
-        q3=None
-        if type(cols).__name__ == "str":
-            try:
-                index = columns.index(cols)
-                rows = np.array(rows[1:]).astype(np.float)
-                extract_rows = rows[:,index]
-                q3 = np.percentile(extract_rows,75,axis=0)
-            except Exception as e:
-                print("{} not found in the columns".format(cols))
-        elif type(cols).__name__ == "list" and cols==columns:
-            rows = np.array(rows[1:]).astype(np.float)
-            q3= np.percentile(rows,75,axis=0)
-        else:
-            print("Other data types are not allowed for cols")
-        return q3
-        
-
-    
-
-
-    def describe(self,cols):
-        self.cols = cols
-        mean = self.mean(cols)
-        median = self.median(cols)
-        minimum = self.minimum(cols)
-        maximum = self.maximum(cols)
-        standard_deviation = self.std(cols)
-        first_quantile = self.first_quantile(cols)
-        third_quantile = self.third_quantile(cols)
+    def describe(self):
+        rows_numerical,columns_numerical,rows_categorical,columns_categorical = self.getColumns()
+        count = self.count()
+        mean = self.mean()
+        median = self.median()
+        minimum = self.minimum()
+        maximum = self.maximum()
+        standard_deviation = self.standard_deviation()
+        first_quantile = self.first_quantile()
+        third_quantile = self.third_quantile()
         x = PrettyTable()
-        x.add_column("Filed name",cols)
+        x.add_column("Filed name",columns_numerical)
+        x.add_column("Counts",count)
         x.add_column("Mean",mean)
         x.add_column("Median",median)
         x.add_column("Minimum",minimum)
@@ -223,27 +137,59 @@ class CSVREADER:
         x.add_column("Third Quantile",third_quantile)
         return x
 
+    def ZscoreOutlier(self):
+        rows_numerical,columns_numerical,rows_categorical,columns_categorical = self.getColumns()
+        data_mean = np.nanmean(rows_numerical,axis=1)
+        data_std = np.nanstd(rows_numerical,axis=1)
+        cut_off = data_std * 3
+        lower = data_mean - cut_off
+        upper = data_mean + cut_off
+        zscore_outlier = []
+        for i in range(len(rows_numerical)):
+            outliers = [x for x in rows_numerical[i] if x < lower[i] or x > upper[i]]
+            outliers_percent = round(((len(outliers)/len(rows_numerical[i])) * 100), 3)
+            zscore_outlier.append(outliers_percent)
+        return zscore_outlier
+
+    # identify outliers with interquartile range
+    def IQROutlier(self):
+        rows_numerical,columns_numerical,rows_categorical,columns_categorical = self.getColumns()
+        q1 = np.nanpercentile(rows_numerical,25,axis=1)
+        q3 = np.nanpercentile(rows_numerical,75,axis=1)
+        iqr = q3 - q1
+        cut_off = iqr * 1.5
+        lower = q1 - cut_off
+        upper = q3 + cut_off
+        iqr_outlier = []
+        for i in range(len(rows_numerical)):
+            outliers = [x for x in rows_numerical[i] if x < lower[i] or x > upper[i]]
+            outliers_percent = round(((len(outliers)/len(rows_numerical[i])) * 100), 3)
+            iqr_outlier.append(outliers_percent)
+        return iqr_outlier
+
+    
+    def visualize_outlier(self):
+        rows_numerical,columns_numerical,rows_categorical,columns_categorical = self.getColumns()
+        zscore_outlier = self.ZscoreOutlier()
+        iqr_outlier = self.IQROutlier()
+        x = PrettyTable()
+        x.add_column("Filed name",columns_numerical)
+        x.add_column("Z-score Outlier in %",zscore_outlier)
+        x.add_column("IQR Outlier in %",iqr_outlier)
+        return x
 
 
-pd = CSVREADER('diabetes.csv')
+
+pd = CSVREADER('insurance.csv')
+pd.read_csv()
 columns = pd.columns()
-pd.head(5)
+print(pd.count())
+print(pd.columns())
 print(pd.shape())
-print(pd.describe(columns))
-# print(pd.mean('Age'))
-# print(pd.median('Age'))
-# print(pd.minimum('Age'))
-# print(pd.maximum('Age'))
-# print("Mean is {}".format(pd.mean(columns)))
-# print("Median is {}".format(pd.median(columns)))
-# print("Minimum value is {}".format(pd.minimum(columns)))
-# print("Maximum value is {}".format(pd.maximum(columns)))
-
-# print("Standard deviation is {}".format(pd.std(columns)))
-# print("First quantile is {}".format(pd.first_quantile(columns)))
-# print("Third quantile is {}".format(pd.third_quantile(columns)))
-
-
+[rows_numerical,columns_numerical,rows_categorical,columns_categorical] = pd.getColumns()
+print(pd.describe())
+print(pd.head(5))
+print(pd.visualize_outlier())
 
 
 
