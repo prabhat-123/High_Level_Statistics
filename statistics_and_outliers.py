@@ -10,16 +10,19 @@ class CSVREADER:
         self.outliers_std = {}
         self.outliers_zscore = {}
 
+    #reading the csv file
     def csv_reader(self):
         csv_file = open(self.filename,'r')
         csv_reader = csv.DictReader(csv_file)
         return csv_reader
 
+    #getting the name of the headers of the csv file
     def get_columns(self):
         csv_reader = self.csv_reader()
         columns = [field for field in next(csv_reader)]
         return columns
 
+    #getting the rows
     def rows(self):
         read_csv = self.csv_reader()
         rows = []
@@ -27,6 +30,7 @@ class CSVREADER:
             rows.append(row)
         return rows
 
+    #getting the categorical and numerical columns separately
     def getColumns(self):
         columns_numerical = defaultdict(list)
         columns = defaultdict(list)
@@ -45,13 +49,8 @@ class CSVREADER:
               columns[k].append(v)
         return columns, columns_numerical, columns_categorical
 
-    def count(self):
-        count_dict = {}
-        columns, columns_numerical, columns_categorical= self.getColumns()
-        for key, value in columns.items():
-            count_dict[key] = len(value)
-        return count_dict
 
+    #return the statistics of the numerical data to save in csv file
     def statistics(self):
         columns, columns_numerical, columns_categorical= self.getColumns()
         stats = {'Mean': {}, 'Median': {}, 'q75': {}, 'q25': {}, 'Minimum': {}, 'Maximum':{}}
@@ -65,7 +64,8 @@ class CSVREADER:
             stats['Maximum'][key], maximum = np.max(data)
         return  stats
 
-    def vis_data(self):
+    #getting the statistics of numerical data to tabulate
+    def numvis_data(self):
         count, mean, median, q75, q25, minimum, maximum, std = ([] for i in range(8))
         columns, columns_numerical, columns_categorical= self.getColumns()
         for key, value in columns_numerical.items():
@@ -80,6 +80,7 @@ class CSVREADER:
             std.append(np.round(np.std(data), 3))
         return count, mean, median, q75, q25, minimum, maximum, std
 
+    #getting the statistics of categorical data
     def catvis_data(self):
       columns, columns_numerical, columns_categorical= self.getColumns()
       count = []
@@ -87,9 +88,9 @@ class CSVREADER:
       for key, value in columns_categorical.items():
           keys.append(Counter(value).keys())
           count.append(Counter(value).values())
-
-
       return count, keys
+
+     #identifying outliers using zscore
     def zscoreOutlier(self):
       columns, numerical_cols, categorcal_cols = self.getColumns()
       for key, value in numerical_cols.items():
@@ -102,7 +103,7 @@ class CSVREADER:
       return self.outliers_std
 
 
-    # identify outliers with interquartile range
+    # identiying outliers uisng interquartile range
     def iqrOutlier(self):
       columns, numerical_cols, categorcal_cols = self.getColumns()
       for key, value in numerical_cols.items():
@@ -116,6 +117,7 @@ class CSVREADER:
         self.outliers_zscore[key] = round(((len(outliers)/len(value)) * 100), 3)
       return self.outliers_zscore
 
+    #saving the statistics in a csv file
     def save_csv(self):
       columns, numerical_cols, categorcal_cols = self.getColumns()
       field_names = [key for key, value in numerical_cols.items()]
@@ -131,9 +133,10 @@ class CSVREADER:
       except IOError:
         print("Input Output Error")
 
-    def visualization(self):
+    #tabulating the numerical statistics
+    def num_vis(self):
         columns, numerical_cols, categorcal_cols = self.getColumns()
-        count, mean, median, q75, q25, minimum, maximum, std = self.vis_data()
+        count, mean, median, q75, q25, minimum, maximum, std = self.numvis_data()
         col_names = [key for key, value in numerical_cols.items()]
         x = PrettyTable()
         x.add_column("Filed name",col_names)
@@ -147,6 +150,7 @@ class CSVREADER:
         x.add_column("Third Quantile",q75)
         return x
 
+    #tabulating the categorical statistics
     def cat_vis(self):
       counts, keys = pd.catvis_data()
       x = PrettyTable()
@@ -157,6 +161,5 @@ class CSVREADER:
       return x
 
 pd = CSVREADER('/content/drive/MyDrive/Datasets_learning_kaggle/insurance.csv')
-# pd.catvis_data()
-print(pd.visualization)
+print(pd.num_vis())
 print(pd.cat_vis())
