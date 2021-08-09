@@ -1,20 +1,20 @@
 import csv
-import numpy as np
-from collections import defaultdict
-from prettytable import PrettyTable
+import ast
 from collections import Counter
+from collections import defaultdict
+from pathlib import Path
 
-import csv
 import numpy as np
-from collections import defaultdict
 from prettytable import PrettyTable
-from collections import Counter
 
 class CSVREADER:
     def __init__(self, filename):
         self.filename = filename
         self.outliers_std = {}
         self.outliers_zscore = {}
+        self.columns_numerical = defaultdict(list)
+        self.columns = defaultdict(list)
+        self.columns_categorical = defaultdict(list)
 
     def csv_reader(self):
         csv_file = open(self.filename,'r')
@@ -34,27 +34,28 @@ class CSVREADER:
         return rows
 
     def separateColumns(self):
-        columns_numerical = defaultdict(list)
-        columns = defaultdict(list)
-        columns_categorical = defaultdict(list)
         csv_reader = self.csv_reader()
-
         for row in csv_reader:
-          for (k, v) in row.items():
+          for k, v in row.items():
+            # value = ast.literal_eval(str(v))
+            # if isinstance(v, int) or isinstance(v, float):
+            #   self.columns_numerical[k].append(v)
+            # elif isinstance(v, str):
+            #   self.columns_categorical[k].append(v)
             try:
               a = float(v)
-              columns_numerical[k].append(a)
+              self.columns_numerical[k].append(a)
             except:
-              columns_categorical[k].append(v)
+              self.columns_categorical[k].append(v)
             finally:
-              columns[k].append(v)
-        return columns, columns_numerical, columns_categorical
+              self.columns[k].append(v)
+
 
 
     def dictStatistics(self):
-        columns, columns_numerical, columns_categorical= self.separateColumns()
+        self.separateColumns()
         stats = {'Mean': {}, 'Median': {}, 'q75': {}, 'q25': {}, 'Minimum': {}, 'Maximum':{}}
-        for key, value in columns_numerical.items():
+        for key, value in self.columns_numerical.items():
             data = np.array(list(map(float, value)))
             stats['Mean'][key], mean = np.round(np.mean(data))
             stats['Median'][key], median = np.percentile(data, 50)
@@ -66,8 +67,8 @@ class CSVREADER:
 
     def numericalStatistics(self):
         count, mean, median, q75, q25, minimum, maximum, std = ([] for i in range(8))
-        columns, columns_numerical, columns_categorical= self.separateColumns()
-        for key, value in columns_numerical.items():
+        self.separateColumns()
+        for key, value in self.columns_numerical.items():
             data = np.array(list(map(float, value)))
             count.append(len(data))
             mean.append(np.round(np.mean(data), 3))
@@ -80,17 +81,17 @@ class CSVREADER:
         return count, mean, median, q75, q25, minimum, maximum, std
 
     def categoricalStatistics(self):
-      columns, columns_numerical, columns_categorical= self.separateColumns()
+      self.separateColumns()
       count = []
       keys = []
-      for key, value in columns_categorical.items():
+      for key, value in self.columns_categorical.items():
           keys.append(Counter(value).keys())
           count.append(Counter(value).values())
       return count, keys
 
     def zscoreOutlier(self):
-      columns, numerical_cols, categorcal_cols = self.separateColumns()
-      for key, value in numerical_cols.items():
+      self.separateColumns()
+      for key, value in self.columns_numerical.items():
         data = np.array(list(map(float, value)))
         data_mean, data_std = np.mean(data), np.std(data)
         cut_off = data_std * 3
@@ -101,8 +102,8 @@ class CSVREADER:
 
 
     def iqrOutlier(self):
-      columns, numerical_cols, categorcal_cols = self.separateColumns()
-      for key, value in numerical_cols.items():
+      self.separateColumns()
+      for key, value in self.columns_numerical.items():
         data = np.array(list(map(float, value)))
         q25, median, q75 = np.percentile(data, 25), np.percentile(data, 75), np.percentile(data, 75)
         iqr = q75 - q25
@@ -114,10 +115,10 @@ class CSVREADER:
       return self.outliers_zscore
 
     def save_csv(self):
-      columns, numerical_cols, categorcal_cols = self.separateColumns()
-      field_names = [key for key, value in numerical_cols.items()]
+      self.separateColumns()
+      field_names = [key for key, value in columns_numerical.items()]
       field_names.insert(0,'Statistics')
-      csvfile = "/content/drive/MyDrive/Datasets_learning_kaggle/statistics.csv"
+      csvfile = "statistics.csv"
       try:
         with open(csvfile, 'w') as csvfile:
           writer = csv.DictWriter(csvfile, fieldnames=field_names)
@@ -126,17 +127,18 @@ class CSVREADER:
             value['Statistics'] = key
             writer.writerow(value)
       except IOError:
-        print("Input Output Error")
+        print("Error while writing into the file.")
 
     def tabulating_num_statistics(self):
         z_value = []
-        columns, numerical_cols, categorcal_cols = self.separateColumns()
+        self.separateColumns()
         z_outlier = self.zscoreOutlier()
         i_outlier = self.iqrOutlier()
         zscore_value = list(z_outlier.values())
         iqr_value = list(i_outlier.values())
         count, mean, median, q75, q25, minimum, maximum, std = self.numericalStatistics()
-        col_names = [key for key, value in numerical_cols.items()]
+        col_names = [key for key, value in self.columns_numerical.items()]
+        print(self.columns_numerical)
         x = PrettyTable()
         x.add_column("Filed name",col_names)
         x.add_column("Count", count)
@@ -160,10 +162,16 @@ class CSVREADER:
       x.add_column('Count', count)
       return x
 
-
-pd = CSVREADER('/content/drive/MyDrive/Datasets_learning_kaggle/insurance.csv')
+path = Path('./insurance.csv')
+pd = CSVREADER(path)
 print("Tabulating the numerical statistics.")
 print(pd.tabulating_num_statistics())
 print()
 print("Tabularing the categorical statistics.")
 print(pd.tabulating_cat_statistics())
+print()
+print('Printing the percentage of outliers using zscore:')
+print(pd.zscoreOutlier())
+print()
+print('Printing the percentage of outlers using IQR: ')
+print(pd.iqrOutlier())
