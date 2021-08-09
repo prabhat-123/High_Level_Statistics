@@ -1,12 +1,17 @@
 import csv
 import numpy as np
-from prettytable import PrettyTable
 from collections import defaultdict
+from prettytable import PrettyTable
+from collections import Counter
 
 class CSVREADER:
     def __init__(self,filename):
         self.filename = filename
 
+    def csv_reader(self):
+        csv_file = open(self.filename,'r')
+        csv_reader = csv.DictReader(csv_file)
+        return csv_reader
     
     def read_csv(self):
         csv_file = open(self.filename,'r')
@@ -178,9 +183,50 @@ class CSVREADER:
         x.add_column("IQR Outlier in %",iqr_outlier)
         return x
 
+    def separateColumns(self):
+        columns_numerical = defaultdict(list)
+        columns = defaultdict(list)
+        columns_categorical = defaultdict(list)
+        csv_reader = self.csv_reader()
+
+        for row in csv_reader:
+          for (k, v) in row.items():
+            try:
+              a = float(v)
+              columns_numerical[k].append(a)
+            except:
+              columns_categorical[k].append(v)
+            finally:
+              columns[k].append(v)
+        return columns, columns_numerical, columns_categorical
 
 
-pd = CSVREADER('insurance.csv')
+    def categoricalStatistics(self):
+      columns, columns_numerical, columns_categorical= self.separateColumns()
+      count = []
+      keys = []
+      for key, value in columns_categorical.items():
+          keys.append(Counter(value).keys())
+          count.append(Counter(value).values())
+      return count, keys
+
+    
+
+    def tabulating_cat_statistics(self):
+        counts, keys = pd.categoricalStatistics()
+        x = PrettyTable()
+        count = [j for i in counts for j in i ]
+        key = [j for i in keys for j in i ]
+        x.add_column('Keys', key)
+        x.add_column('Count', count)
+        return x
+
+    
+
+
+
+
+pd = CSVREADER('tips.csv')
 pd.read_csv()
 columns = pd.columns()
 print(pd.count())
@@ -190,6 +236,8 @@ print(pd.shape())
 print(pd.describe())
 print(pd.head(5))
 print(pd.visualize_outlier())
-
-
+columns, columns_numerical, columns_categorical = pd.separateColumns()
+print(columns_categorical)
+print("Tabularing the categorical statistics.")
+print(pd.tabulating_cat_statistics())
 
