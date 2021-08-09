@@ -10,34 +10,29 @@ class CSVREADER:
         self.outliers_std = {}
         self.outliers_zscore = {}
 
-    #reading the csv file
     def csv_reader(self):
         csv_file = open(self.filename,'r')
         csv_reader = csv.DictReader(csv_file)
         return csv_reader
 
-    #getting the name of the headers of the csv file
     def get_columns(self):
         csv_reader = self.csv_reader()
         columns = [field for field in next(csv_reader)]
         return columns
 
-    #getting the rows
-    def rows(self):
+    def get_rows(self):
         read_csv = self.csv_reader()
         rows = []
         for row in read_csv:
             rows.append(row)
         return rows
 
-    #getting the categorical and numerical columns separately
-    def getColumns(self):
+    def separateColumns(self):
         columns_numerical = defaultdict(list)
         columns = defaultdict(list)
         columns_categorical = defaultdict(list)
         csv_reader = self.csv_reader()
-        self.fields = [field for field in next(csv_reader)]
-        # print('Field names are: ' + ', '.join(field for field in self.fields))
+
         for row in csv_reader:
           for (k, v) in row.items():
             try:
@@ -50,9 +45,8 @@ class CSVREADER:
         return columns, columns_numerical, columns_categorical
 
 
-    #return the statistics of the numerical data to save in csv file
-    def statistics(self):
-        columns, columns_numerical, columns_categorical= self.getColumns()
+    def dictStatistics(self):
+        columns, columns_numerical, columns_categorical= self.separateColumns()
         stats = {'Mean': {}, 'Median': {}, 'q75': {}, 'q25': {}, 'Minimum': {}, 'Maximum':{}}
         for key, value in columns_numerical.items():
             data = np.array(list(map(float, value)))
@@ -64,10 +58,9 @@ class CSVREADER:
             stats['Maximum'][key], maximum = np.max(data)
         return  stats
 
-    #getting the statistics of numerical data to tabulate
-    def numvis_data(self):
+    def numericalStatistics(self):
         count, mean, median, q75, q25, minimum, maximum, std = ([] for i in range(8))
-        columns, columns_numerical, columns_categorical= self.getColumns()
+        columns, columns_numerical, columns_categorical= self.separateColumns()
         for key, value in columns_numerical.items():
             data = np.array(list(map(float, value)))
             count.append(len(data))
@@ -80,9 +73,8 @@ class CSVREADER:
             std.append(np.round(np.std(data), 3))
         return count, mean, median, q75, q25, minimum, maximum, std
 
-    #getting the statistics of categorical data
-    def catvis_data(self):
-      columns, columns_numerical, columns_categorical= self.getColumns()
+    def categoricalStatistics(self):
+      columns, columns_numerical, columns_categorical= self.separateColumns()
       count = []
       keys = []
       for key, value in columns_categorical.items():
@@ -90,9 +82,8 @@ class CSVREADER:
           count.append(Counter(value).values())
       return count, keys
 
-     #identifying outliers using zscore
     def zscoreOutlier(self):
-      columns, numerical_cols, categorcal_cols = self.getColumns()
+      columns, numerical_cols, categorcal_cols = self.separateColumns()
       for key, value in numerical_cols.items():
         data = np.array(list(map(float, value)))
         data_mean, data_std = np.mean(data), np.std(data)
@@ -103,9 +94,8 @@ class CSVREADER:
       return self.outliers_std
 
 
-    # identiying outliers uisng interquartile range
     def iqrOutlier(self):
-      columns, numerical_cols, categorcal_cols = self.getColumns()
+      columns, numerical_cols, categorcal_cols = self.separateColumns()
       for key, value in numerical_cols.items():
         data = np.array(list(map(float, value)))
         q25, median, q75 = np.percentile(data, 25), np.percentile(data, 75), np.percentile(data, 75)
@@ -117,9 +107,8 @@ class CSVREADER:
         self.outliers_zscore[key] = round(((len(outliers)/len(value)) * 100), 3)
       return self.outliers_zscore
 
-    #saving the statistics in a csv file
     def save_csv(self):
-      columns, numerical_cols, categorcal_cols = self.getColumns()
+      columns, numerical_cols, categorcal_cols = self.separateColumns()
       field_names = [key for key, value in numerical_cols.items()]
       field_names.insert(0,'Statistics')
       csvfile = "/content/drive/MyDrive/Datasets_learning_kaggle/statistics.csv"
@@ -133,10 +122,9 @@ class CSVREADER:
       except IOError:
         print("Input Output Error")
 
-    #tabulating the numerical statistics
-    def num_vis(self):
-        columns, numerical_cols, categorcal_cols = self.getColumns()
-        count, mean, median, q75, q25, minimum, maximum, std = self.numvis_data()
+    def tabulating_num_statistics(self):
+        columns, numerical_cols, categorcal_cols = self.separateColumns()
+        count, mean, median, q75, q25, minimum, maximum, std = self.numericalStatistics()
         col_names = [key for key, value in numerical_cols.items()]
         x = PrettyTable()
         x.add_column("Filed name",col_names)
@@ -150,9 +138,8 @@ class CSVREADER:
         x.add_column("Third Quantile",q75)
         return x
 
-    #tabulating the categorical statistics
-    def cat_vis(self):
-      counts, keys = pd.catvis_data()
+    def tabulating_cat_statistics(self):
+      counts, keys = pd.categoricalStatistics()
       x = PrettyTable()
       count = [j for i in counts for j in i ]
       key = [j for i in keys for j in i ]
@@ -161,8 +148,11 @@ class CSVREADER:
       return x
 
 pd = CSVREADER('/content/drive/MyDrive/Datasets_learning_kaggle/insurance.csv')
-print(pd.num_vis())
-print(pd.cat_vis())
+print("Tabulating the numerical statistics.")
+print(pd.tabulating_num_statistics())
+print()
+print("Tabularing the categorical statistics.")
+print(pd.tabulating_cat_statistics())
 print()
 print('Printing the percentage of outliers using zscore:')
 print(pd.zscoreOutlier())
