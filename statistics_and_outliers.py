@@ -1,8 +1,8 @@
-
 import csv
 import numpy as np
 from collections import defaultdict
 from prettytable import PrettyTable
+from collections import Counter
 
 class CSVREADER:
     def __init__(self, filename):
@@ -57,16 +57,40 @@ class CSVREADER:
         stats = {'Mean': {}, 'Median': {}, 'q75': {}, 'q25': {}, 'Minimum': {}, 'Maximum':{}}
         for key, value in columns_numerical.items():
             data = np.array(list(map(float, value)))
-            stats['Mean'][key] = np.round(np.mean(data))
-            stats['Median'][key] = np.percentile(data, 50)
-            stats['q75'][key] = np.percentile(data, 75)
-            stats['q25'][key] = np.percentile(data, 25)
-            stats['Minimum'][key] = np.min(data)
-            stats['Maximum'][key] = np.max(data)
+            stats['Mean'][key], mean = np.round(np.mean(data))
+            stats['Median'][key], median = np.percentile(data, 50)
+            stats['q75'][key], q75 = np.percentile(data, 75)
+            stats['q25'][key], q25 = np.percentile(data, 25)
+            stats['Minimum'][key], minimum = np.min(data)
+            stats['Maximum'][key], maximum = np.max(data)
         return  stats
 
+    def vis_data(self):
+        count, mean, median, q75, q25, minimum, maximum, std = ([] for i in range(8))
+        columns, columns_numerical, columns_categorical= self.getColumns()
+        for key, value in columns_numerical.items():
+            data = np.array(list(map(float, value)))
+            count.append(len(data))
+            mean.append(np.round(np.mean(data), 3))
+            median.append(np.round(np.percentile(data, 50), 3))
+            q75.append(np.round(np.percentile(data, 75), 3))
+            q25.append(np.round(np.percentile(data, 25), 3))
+            minimum.append(np.round(np.min(data), 3))
+            maximum.append(np.round(np.max(data), 3))
+            std.append(np.round(np.std(data), 3))
+        return count, mean, median, q75, q25, minimum, maximum, std
 
-    def stdOutlier(self):
+    def catvis_data(self):
+      columns, columns_numerical, columns_categorical= self.getColumns()
+      count = []
+      keys = []
+      for key, value in columns_categorical.items():
+          keys.append(Counter(value).keys())
+          count.append(Counter(value).values())
+
+
+      return count, keys
+    def zscoreOutlier(self):
       columns, numerical_cols, categorcal_cols = self.getColumns()
       for key, value in numerical_cols.items():
         data = np.array(list(map(float, value)))
@@ -79,7 +103,7 @@ class CSVREADER:
 
 
     # identify outliers with interquartile range
-    def zscoreOutlier(self):
+    def iqrOutlier(self):
       columns, numerical_cols, categorcal_cols = self.getColumns()
       for key, value in numerical_cols.items():
         data = np.array(list(map(float, value)))
@@ -90,7 +114,7 @@ class CSVREADER:
         outliers = [x for x in data if x < lower or x > upper]
         outliers_removed = [x for x in data if x >= lower and x <= upper]
         self.outliers_zscore[key] = round(((len(outliers)/len(value)) * 100), 3)
-      return q25, median, q75, self.outliers_zscore
+      return self.outliers_zscore
 
     def save_csv(self):
       columns, numerical_cols, categorcal_cols = self.getColumns()
@@ -107,12 +131,32 @@ class CSVREADER:
       except IOError:
         print("Input Output Error")
 
-    # def visualization(self):
-    #     columns, numerical_cols, categorcal_cols = self.getColumns()
-    #     stats = self.statistics()
-    #     x = Prettytable()
-    #     for i in range(6):
-    #       x.add_column()
+    def visualization(self):
+        columns, numerical_cols, categorcal_cols = self.getColumns()
+        count, mean, median, q75, q25, minimum, maximum, std = self.vis_data()
+        col_names = [key for key, value in numerical_cols.items()]
+        x = PrettyTable()
+        x.add_column("Filed name",col_names)
+        x.add_column("Count", count)
+        x.add_column("Mean",mean)
+        x.add_column("Median",median)
+        x.add_column("Standard deviation", std)
+        x.add_column("Minimum",minimum)
+        x.add_column("Maximum",maximum)
+        x.add_column("First Quantile",q25)
+        x.add_column("Third Quantile",q75)
+        return x
+
+    def cat_vis(self):
+      counts, keys = pd.catvis_data()
+      x = PrettyTable()
+      count = [j for i in counts for j in i ]
+      key = [j for i in keys for j in i ]
+      x.add_column('Keys', key)
+      x.add_column('Count', count)
+      return x
 
 pd = CSVREADER('/content/drive/MyDrive/Datasets_learning_kaggle/insurance.csv')
-pd.statistics()
+# pd.catvis_data()
+print(pd.visualization)
+print(pd.cat_vis())
