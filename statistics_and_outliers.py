@@ -4,6 +4,12 @@ from collections import defaultdict
 from prettytable import PrettyTable
 from collections import Counter
 
+import csv
+import numpy as np
+from collections import defaultdict
+from prettytable import PrettyTable
+from collections import Counter
+
 class CSVREADER:
     def __init__(self, filename):
         self.filename = filename
@@ -123,7 +129,12 @@ class CSVREADER:
         print("Input Output Error")
 
     def tabulating_num_statistics(self):
+        z_value = []
         columns, numerical_cols, categorcal_cols = self.separateColumns()
+        z_outlier = self.zscoreOutlier()
+        i_outlier = self.iqrOutlier()
+        zscore_value = list(z_outlier.values())
+        iqr_value = list(i_outlier.values())
         count, mean, median, q75, q25, minimum, maximum, std = self.numericalStatistics()
         col_names = [key for key, value in numerical_cols.items()]
         x = PrettyTable()
@@ -136,6 +147,8 @@ class CSVREADER:
         x.add_column("Maximum",maximum)
         x.add_column("First Quantile",q25)
         x.add_column("Third Quantile",q75)
+        x.add_column("Outliers_zscore(%)",zscore_value)
+        x.add_column("Outliers_iqr(%)",iqr_value)
         return x
 
     def tabulating_cat_statistics(self):
@@ -147,15 +160,10 @@ class CSVREADER:
       x.add_column('Count', count)
       return x
 
+
 pd = CSVREADER('/content/drive/MyDrive/Datasets_learning_kaggle/insurance.csv')
 print("Tabulating the numerical statistics.")
 print(pd.tabulating_num_statistics())
 print()
 print("Tabularing the categorical statistics.")
 print(pd.tabulating_cat_statistics())
-print()
-print('Printing the percentage of outliers using zscore:')
-print(pd.zscoreOutlier())
-print()
-print('Printing the percentage of outlers using IQR: ')
-print(pd.iqrOutlier())
