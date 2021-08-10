@@ -1,8 +1,10 @@
 import csv
-import numpy as np
 from collections import defaultdict
-from prettytable import PrettyTable
+
 from collections import Counter
+
+import numpy as np
+from prettytable import PrettyTable
 
 class CSVREADER:
     def __init__(self,filename):
@@ -36,11 +38,8 @@ class CSVREADER:
         rows = self.rows()
         columns = self.columns()
         rows = np.array(rows[1:])
-        rows_separation = np.split(rows,len(columns),axis=1)
-        rows_numerical = []
-        columns_numerical = []
-        rows_categorical = []
-        columns_categorical = []
+        rows_separation = np.split(rows, len(columns), axis=1)
+        rows_numerical, rows_categorical, columns_numerical, columns_categorical = [], [], [], []
         for i in range(len(columns)):
             try:
                 rows_numerical.append([float(a) for a in rows_separation[i]]) 
@@ -51,11 +50,11 @@ class CSVREADER:
         return rows_numerical,columns_numerical,rows_categorical,columns_categorical
 
 
-    def head(self,i):
-        self.i = i
+    def head(self,head_index_num):
+        self.head_index_num  = head_index_num 
         columns = self.columns()
         rows = self.rows()
-        rows = rows[1:i+1]
+        rows = rows[1:head_index_num+1]
         x = PrettyTable()
         x.field_names = columns
         x.add_rows(rows)
@@ -130,19 +129,19 @@ class CSVREADER:
         standard_deviation = self.standard_deviation()
         first_quantile = self.first_quantile()
         third_quantile = self.third_quantile()
-        x = PrettyTable()
-        x.add_column("Filed name",columns_numerical)
-        x.add_column("Counts",count)
-        x.add_column("Mean",mean)
-        x.add_column("Median",median)
-        x.add_column("Minimum",minimum)
-        x.add_column("Maximum",maximum)
-        x.add_column("Standard Deviation",standard_deviation)
-        x.add_column("First Quantile",first_quantile)
-        x.add_column("Third Quantile",third_quantile)
-        return x
+        table = PrettyTable()
+        table.add_column("Filed name",columns_numerical)
+        table.add_column("Counts",count)
+        table.add_column("Mean",mean)
+        table.add_column("Median",median)
+        table.add_column("Minimum",minimum)
+        table.add_column("Maximum",maximum)
+        table.add_column("Standard Deviation",standard_deviation)
+        table.add_column("First Quantile",first_quantile)
+        table.add_column("Third Quantile",third_quantile)
+        return table
 
-    def ZscoreOutlier(self):
+    def zscoreOutlier(self):
         rows_numerical,columns_numerical,rows_categorical,columns_categorical = self.getColumns()
         data_mean = np.nanmean(rows_numerical,axis=1)
         data_std = np.nanstd(rows_numerical,axis=1)
@@ -156,8 +155,8 @@ class CSVREADER:
             zscore_outlier.append(outliers_percent)
         return zscore_outlier
 
-    # identify outliers with interquartile range
-    def IQROutlier(self):
+
+    def iqrOutlier(self):
         rows_numerical,columns_numerical,rows_categorical,columns_categorical = self.getColumns()
         q1 = np.nanpercentile(rows_numerical,25,axis=1)
         q3 = np.nanpercentile(rows_numerical,75,axis=1)
@@ -175,13 +174,13 @@ class CSVREADER:
     
     def visualize_outlier(self):
         rows_numerical,columns_numerical,rows_categorical,columns_categorical = self.getColumns()
-        zscore_outlier = self.ZscoreOutlier()
-        iqr_outlier = self.IQROutlier()
-        x = PrettyTable()
-        x.add_column("Filed name",columns_numerical)
-        x.add_column("Z-score Outlier in %",zscore_outlier)
-        x.add_column("IQR Outlier in %",iqr_outlier)
-        return x
+        zscore_outlier = self.zscoreOutlier()
+        iqr_outlier = self.iqrOutlier()
+        table = PrettyTable()
+        table.add_column("Filed name",columns_numerical)
+        table.add_column("Z-score Outlier in %",zscore_outlier)
+        table.add_column("IQR Outlier in %",iqr_outlier)
+        return table
 
     def separateColumns(self):
         columns_numerical = defaultdict(list)
@@ -190,14 +189,14 @@ class CSVREADER:
         csv_reader = self.csv_reader()
 
         for row in csv_reader:
-          for (k, v) in row.items():
+          for (key, val) in row.items():
             try:
-              a = float(v)
-              columns_numerical[k].append(a)
+              float_val = float(val)
+              columns_numerical[key].append(float_val)
             except:
-              columns_categorical[k].append(v)
+              columns_categorical[key].append(val)
             finally:
-              columns[k].append(v)
+              columns[key].append(val)
         return columns, columns_numerical, columns_categorical
 
 
@@ -213,31 +212,12 @@ class CSVREADER:
     
 
     def tabulating_cat_statistics(self):
-        counts, keys = pd.categoricalStatistics()
-        x = PrettyTable()
+        counts, keys = self.categoricalStatistics()
+        table = PrettyTable()
         count = [j for i in counts for j in i ]
         key = [j for i in keys for j in i ]
-        x.add_column('Keys', key)
-        x.add_column('Count', count)
-        return x
+        table.add_column('Keys', key)
+        table.add_column('Count', count)
+        return table
 
     
-
-
-
-
-pd = CSVREADER('tips.csv')
-pd.read_csv()
-columns = pd.columns()
-print(pd.count())
-print(pd.columns())
-print(pd.shape())
-[rows_numerical,columns_numerical,rows_categorical,columns_categorical] = pd.getColumns()
-print(pd.describe())
-print(pd.head(5))
-print(pd.visualize_outlier())
-columns, columns_numerical, columns_categorical = pd.separateColumns()
-print(columns_categorical)
-print("Tabularing the categorical statistics.")
-print(pd.tabulating_cat_statistics())
-
