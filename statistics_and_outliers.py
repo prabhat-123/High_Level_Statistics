@@ -1,8 +1,8 @@
 import csv
 import ast
+from pathlib import Path
 from collections import Counter
 from collections import defaultdict
-from pathlib import Path
 
 import numpy as np
 from prettytable import PrettyTable
