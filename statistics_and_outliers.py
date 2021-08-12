@@ -220,4 +220,3 @@ class CSVREADER:
         table.add_column('Count', count)
         return table
 
-    
